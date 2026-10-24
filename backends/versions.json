@@ -53,7 +53,7 @@
     "base_commit": "db8c114802a070a7903f84d01142fda0b00fa7df",
     "license_file": "backends/ninfer/LICENSE",
     "local_changes": "Ordered local patches over the pinned upstream; verify every patch and the complete prepared tree.",
-    "patched_tree": "0eed1e7ab5a4bfa0b0b41ca9ebd2db54b8942d09",
+    "patched_tree": "8bd21f0ca4c8038d4ec4e22397af1e5647f86173",
     "patches": [
       {
         "id": "kvmem",
@@ -92,6 +92,14 @@
         ],
         "after_tree": "0eed1e7ab5a4bfa0b0b41ca9ebd2db54b8942d09",
         "source": "JGamboa/ninfer-4090-windows@e905787f067de89ef6ef28c52d65a2ce91d425ca; RowSplit and existing BF16 producer adaptation"
+      },
+      {
+        "id": "mmproj-shape-4352",
+        "path": "backends/patches/ninfer-mmproj-shape-4352.patch",
+        "sha256": "da0ff251d1b8fd0498d6fe00993ce51af1e89da97161bf63c99e46e3ede0aed1",
+        "requires": [],
+        "after_tree": "8bd21f0ca4c8038d4ec4e22397af1e5647f86173",
+        "source": "b1231227/ninfer@72dbd773df03c4d40c2e34460fff3ba54b5583fb"
       }
     ]
   },

@@ -1,0 +1,172 @@
+diff --git a/src/ops/linear/q4/q4_dispatch.cpp b/src/ops/linear/q4/q4_dispatch.cpp
+index ded2d2687c..4109bc5bf7 100644
+--- a/src/ops/linear/q4/q4_dispatch.cpp
++++ b/src/ops/linear/q4/q4_dispatch.cpp
+@@ -28,6 +28,7 @@ constexpr std::array kShapes{
+     ShapeEntry{248320, 5120, select_q4_n248320_k5120},
+     ShapeEntry{3456, 1152, select_q4_n3456_k1152, select_q4_n3456_k1152_unified},
+     ShapeEntry{4304, 1152, select_q4_n4304_k1152, select_q4_n4304_k1152_unified},
++    ShapeEntry{4352, 1152, select_q4_n4352_k1152, select_q4_n4352_k1152_unified},
+ };
+ } // namespace
+ 
+diff --git a/src/ops/linear/q4/q4_shapes.h b/src/ops/linear/q4/q4_shapes.h
+index b639cfd32d..4d42ed2716 100644
+--- a/src/ops/linear/q4/q4_shapes.h
++++ b/src/ops/linear/q4/q4_shapes.h
+@@ -18,6 +18,7 @@ namespace ninfer::ops::detail {
+ [[nodiscard]] Q4Launch select_q4_n248320_k5120(std::int32_t tokens);
+ [[nodiscard]] Q4Launch select_q4_n3456_k1152(std::int32_t tokens);
+ [[nodiscard]] Q4Launch select_q4_n4304_k1152(std::int32_t tokens);
++[[nodiscard]] Q4Launch select_q4_n4352_k1152(std::int32_t tokens);
+ 
+ [[nodiscard]] Q4Launch select_q4_n1024_k5120_unified(std::int32_t tokens);
+ [[nodiscard]] Q4Launch select_q4_n4096_k5120_unified(std::int32_t tokens);
+@@ -29,5 +30,6 @@ namespace ninfer::ops::detail {
+ [[nodiscard]] Q4Launch select_q4_n131072_k2048_unified(std::int32_t tokens);
+ [[nodiscard]] Q4Launch select_q4_n3456_k1152_unified(std::int32_t tokens);
+ [[nodiscard]] Q4Launch select_q4_n4304_k1152_unified(std::int32_t tokens);
++[[nodiscard]] Q4Launch select_q4_n4352_k1152_unified(std::int32_t tokens);
+ 
+ } // namespace ninfer::ops::detail
+diff --git a/src/ops/linear/q4/shapes/n4352_k1152.cpp b/src/ops/linear/q4/shapes/n4352_k1152.cpp
+new file mode 100644
+index 0000000000..2d189854a7
+--- /dev/null
++++ b/src/ops/linear/q4/shapes/n4352_k1152.cpp
+@@ -0,0 +1,16 @@
++#include "ops/linear/q4/q4_shapes.h"
++#include <stdexcept>
++
++namespace ninfer::ops::detail {
++
++Q4Launch select_q4_n4352_k1152(std::int32_t tokens) {
++    if (tokens > 131072 || tokens % 4 != 0) {
++        throw std::invalid_argument("q4 linear: T must be a multiple of 4 in [4,131072]");
++    }
++    if (tokens <= 12) return tokens % 8 == 0 ? launch_q4_simt_r8_c8 : launch_q4_simt_r8_c4;
++    if (tokens <= 24) return launch_q4_simt_r8_c8;
++    if (tokens <= 320) return launch_q4_mma_r64_c64;
++    return launch_q4_mma_r64_c128;
++}
++
++} // namespace ninfer::ops::detail
+diff --git a/src/ops/linear/q4/shapes/unified.cpp b/src/ops/linear/q4/shapes/unified.cpp
+index cf2b3e5b25..20a8ba9992 100644
+--- a/src/ops/linear/q4/shapes/unified.cpp
++++ b/src/ops/linear/q4/shapes/unified.cpp
+@@ -147,4 +147,15 @@ Q4Launch select_q4_n4304_k1152_unified(std::int32_t tokens) {
+     return launch_q4_a16_mma_r64_t128;
+ }
+ 
++Q4Launch select_q4_n4352_k1152_unified(std::int32_t tokens) {
++    if (tokens > 131072 || tokens % 4 != 0)
++        throw std::invalid_argument("q4 linear: T must be a multiple of 4 in [4,131072]");
++    if (tokens <= 16) return launch_q4_a16_sliced_r16_t16_w4_s2;
++    if (tokens <= 32) return launch_q4_a16_sliced_r16_t32_w4_s2;
++    if (tokens <= 64) return launch_q4_a16_sliced_r32_t32_w2_s2;
++    if (tokens <= 96) return launch_q4_a16_mma_r32_t32_k128_s2_a2;
++    if (tokens <= 384) return launch_q4_a16_sliced_r32_t32_w2_s2;
++    return launch_q4_a16_mma_r64_t128;
++}
++
+ } // namespace ninfer::ops::detail
+diff --git a/src/ops/linear/q4/sources.cmake b/src/ops/linear/q4/sources.cmake
+index 8aa62c12be..3340543a3d 100644
+--- a/src/ops/linear/q4/sources.cmake
++++ b/src/ops/linear/q4/sources.cmake
+@@ -22,4 +22,5 @@ target_sources(ninfer_ops PRIVATE
+   "${CMAKE_CURRENT_LIST_DIR}/shapes/n248320_k5120.cu"
+   "${CMAKE_CURRENT_LIST_DIR}/shapes/n3456_k1152.cpp"
+   "${CMAKE_CURRENT_LIST_DIR}/shapes/n4304_k1152.cpp"
++  "${CMAKE_CURRENT_LIST_DIR}/shapes/n4352_k1152.cpp"
+ )
+diff --git a/src/ops/linear/q5/q5_dispatch.cpp b/src/ops/linear/q5/q5_dispatch.cpp
+index d52b98696d..c7ddbefe51 100644
+--- a/src/ops/linear/q5/q5_dispatch.cpp
++++ b/src/ops/linear/q5/q5_dispatch.cpp
+@@ -21,6 +21,7 @@ constexpr std::array kShapes{
+     ShapeEntry{5120, 17408, select_q5_n5120_k17408, select_q5_n5120_k17408_unified},
+     ShapeEntry{1152, 1152, select_q5_n1152_k1152, select_q5_n1152_k1152_unified},
+     ShapeEntry{1152, 4304, select_q5_n1152_k4304, select_q5_n1152_k4304_unified},
++    ShapeEntry{1152, 4352, select_q5_n1152_k4352, select_q5_n1152_k4352_unified},
+ };
+ } // namespace
+ 
+diff --git a/src/ops/linear/q5/q5_shapes.h b/src/ops/linear/q5/q5_shapes.h
+index c22b8add87..c5a95e682f 100644
+--- a/src/ops/linear/q5/q5_shapes.h
++++ b/src/ops/linear/q5/q5_shapes.h
+@@ -11,10 +11,12 @@ namespace ninfer::ops::detail {
+ [[nodiscard]] Q5Launch select_q5_n5120_k17408(std::int32_t tokens);
+ [[nodiscard]] Q5Launch select_q5_n1152_k1152(std::int32_t tokens);
+ [[nodiscard]] Q5Launch select_q5_n1152_k4304(std::int32_t tokens);
++[[nodiscard]] Q5Launch select_q5_n1152_k4352(std::int32_t tokens);
+ 
+ [[nodiscard]] Q5Launch select_q5_n1024_k5120_unified(std::int32_t tokens);
+ [[nodiscard]] Q5Launch select_q5_n1152_k1152_unified(std::int32_t tokens);
+ [[nodiscard]] Q5Launch select_q5_n1152_k4304_unified(std::int32_t tokens);
++[[nodiscard]] Q5Launch select_q5_n1152_k4352_unified(std::int32_t tokens);
+ [[nodiscard]] Q5Launch select_q5_n5120_k17408_unified(std::int32_t tokens);
+ [[nodiscard]] Q5Launch select_q5_n5120_k6144_unified(std::int32_t tokens);
+ [[nodiscard]] Q5Launch select_q5_n6144_k5120_unified(std::int32_t tokens);
+diff --git a/src/ops/linear/q5/shapes/n1152_k4352.cpp b/src/ops/linear/q5/shapes/n1152_k4352.cpp
+new file mode 100644
+index 0000000000..1e7fbdddf1
+--- /dev/null
++++ b/src/ops/linear/q5/shapes/n1152_k4352.cpp
+@@ -0,0 +1,15 @@
++#include "ops/linear/q5/q5_shapes.h"
++#include <stdexcept>
++
++namespace ninfer::ops::detail {
++
++Q5Launch select_q5_n1152_k4352(std::int32_t tokens) {
++    if (tokens > 131072 || tokens % 4 != 0) {
++        throw std::invalid_argument("q5 linear: T must be a multiple of 4 in [4,131072]");
++    }
++    if (tokens <= 120) return launch_q5_simt_r8_c4;
++    if (tokens <= 1148) return launch_q5_mma_r64_c64;
++    return launch_q5_mma_r64_c128;
++}
++
++} // namespace ninfer::ops::detail
+diff --git a/src/ops/linear/q5/shapes/unified.cpp b/src/ops/linear/q5/shapes/unified.cpp
+index c0c7a00894..a4ec0b76ca 100644
+--- a/src/ops/linear/q5/shapes/unified.cpp
++++ b/src/ops/linear/q5/shapes/unified.cpp
+@@ -117,4 +117,22 @@ Q5Launch select_q5_n7168_k5120_unified(std::int32_t tokens) {
+     return launch_q5_a16_mma_r64_t128;
+ }
+ 
++Q5Launch select_q5_n1152_k4352_unified(std::int32_t tokens) {
++    if (tokens > 131072 || tokens % 4 != 0)
++        throw std::invalid_argument("q5 linear: T must be a multiple of 4 in [4,131072]");
++    if (tokens <= 4) return launch_q5_a16_direct_r2_t4_w4_g4_b4;
++    if (tokens <= 8) return launch_q5_a16_direct_r2_t4_w2_g8_b4;
++    if (tokens <= 32) return launch_q5_a16_sliced_r16_t16_w4_s2;
++    if (tokens <= 48) return launch_q5_a16_sliced_r16_t24_w4_s2;
++    if (tokens <= 64) return launch_q5_a16_sliced_r16_t32_w4_s2;
++    if (tokens <= 96) return launch_q5_a16_sliced_r32_t24_w4_s2_pairwise;
++    if (tokens <= 288) return launch_q5_a16_sliced_r32_t32_w4_s2;
++    if (tokens <= 448) return launch_q5_a16_sliced_r32_t32_w4_s1;
++    if (tokens <= 576) return launch_q5_a16_sliced_r32_t64_w2_s2;
++    if (tokens <= 672) return launch_q5_a16_sliced_r32_t32_w4_s1;
++    if (tokens <= 1152) return launch_q5_a16_mma_r32_t128;
++    if (tokens <= 1536) return launch_q5_a16_mma_r64_t96_k128_s1_a1;
++    return launch_q5_a16_mma_r64_t128;
++}
++
+ } // namespace ninfer::ops::detail
+diff --git a/src/ops/linear/q5/sources.cmake b/src/ops/linear/q5/sources.cmake
+index ab10310d62..497acd1a7a 100644
+--- a/src/ops/linear/q5/sources.cmake
++++ b/src/ops/linear/q5/sources.cmake
+@@ -11,6 +11,7 @@ target_sources(ninfer_ops PRIVATE
+   "${CMAKE_CURRENT_LIST_DIR}/shapes/n5120_k17408.cu"
+   "${CMAKE_CURRENT_LIST_DIR}/shapes/n1152_k1152.cpp"
+   "${CMAKE_CURRENT_LIST_DIR}/shapes/n1152_k4304.cpp"
++  "${CMAKE_CURRENT_LIST_DIR}/shapes/n1152_k4352.cpp"
+   "${CMAKE_CURRENT_LIST_DIR}/q5_rowsplit_gemm_mma.cu"
+   "${CMAKE_CURRENT_LIST_DIR}/q5_rowsplit_gemm_simt.cu"
+   "${CMAKE_CURRENT_LIST_DIR}/q5_rowsplit_gemv.cu"
